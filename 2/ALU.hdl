@@ -1,0 +1,81 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/2/ALU.hdl
+/**
+ * ALU (Arithmetic Logic Unit):
+ * Computes out = one of the following functions:
+ *                0, 1, -1,
+ *                x, y, !x, !y, -x, -y,
+ *                x + 1, y + 1, x - 1, y - 1,
+ *                x + y, x - y, y - x,
+ *                x & y, x | y
+ * on the 16-bit inputs x, y,
+ * according to the input bits zx, nx, zy, ny, f, no.
+ * In addition, computes the two output bits:
+ * if (out == 0) zr = 1, else zr = 0
+ * if (out < 0)  ng = 1, else ng = 0
+ */
+// Implementation: Manipulates the x and y inputs
+// and operates on the resulting values, as follows:
+// if (zx == 1) sets x = 0        // 16-bit constant
+// if (nx == 1) sets x = !x       // bitwise not
+// if (zy == 1) sets y = 0        // 16-bit constant
+// if (ny == 1) sets y = !y       // bitwise not
+// if (f == 1)  sets out = x + y  // integer 2's complement addition
+// if (f == 0)  sets out = x & y  // bitwise and
+// if (no == 1) sets out = !out   // bitwise not
+
+CHIP ALU {
+    IN  
+        x[16], y[16],  // 16-bit inputs        
+        zx, // zero the x input?
+        nx, // negate the x input?
+        zy, // zero the y input?
+        ny, // negate the y input?
+        f,  // compute (out = x + y) or (out = x & y)?
+        no; // negate the out output?
+    OUT 
+        out[16], // 16-bit output
+        zr,      // if (out == 0) equals 1, else 0
+        ng;      // if (out < 0)  equals 1, else 0
+
+    PARTS:
+    	Mux16(a=x, b=false, sel=zx, out=xZx);
+	Not16(in=xZx, out=outNx);
+	Mux16(a=xZx, b=outNx, sel=nx, out=xNx);
+	Mux16(a=y, b=false, sel=zy, out=yZy);
+	Not16(in=yZy, out=outNy);
+	Mux16(a=yZy, b=outNy, sel=ny, out=yNy);
+	And16(a=xNx, b=yNy, out=xAndy);
+	Add16(a=xNx, b=yNy, out=xAddy);
+	Mux16(a=xAndy, b=xAddy, sel=f, out=xFy);
+	Not16(in=xFy, out=NxFy);
+	Mux16(a=xFy, b=NxFy, sel=no, out=out);
+
+	Mux(a=out[0], b=out[0], sel=1, out=in[0]);
+	Mux(a=out[1], b=out[1], sel=1, out=in[1]);
+	Mux(a=out[2], b=out[2], sel=1, out=in[2]);
+	Mux(a=out[3], b=out[3], sel=1, out=in[3]);
+	Mux(a=out[4], b=out[4], sel=1, out=in[4]);
+	Mux(a=out[5], b=out[5], sel=1, out=in[5]);
+	Mux(a=out[6], b=out[6], sel=1, out=in[6]);
+	Mux(a=out[7], b=out[7], sel=1, out=in[7]);
+	Or8Way(in=in, out=0To7);
+	Mux(a=out[8], b=out[8], sel=1, out=in[0]);
+	Mux(a=out[9], b=out[9], sel=1, out=in[1]);
+	Mux(a=out[10], b=out[10], sel=1, out=in[2]);
+	Mux(a=out[11], b=out[11], sel=1, out=in[3]);
+	Mux(a=out[12], b=out[12], sel=1, out=in[4]);
+	Mux(a=out[13], b=out[13], sel=1, out=in[5]);
+	Mux(a=out[14], b=out[14], sel=1, out=in[6]);
+	Mux(a=out[15], b=out[15], sel=1, out=in[7]);
+	Or8Way(in=in, out=8To15);
+
+	Or8Way(in[0]=out[0], in[1]=out[1], in[2]=out[2], in[3]=out[3], in[4]=out[4], in[5]=out[5], in[6]=out[6], in[7]=out[7], out=0To7);
+	Or8Way(in[0]=out[8], in[1]=out[9], in[2]=out[10], in[3]=out[11], in[4]=out[12], in[5]=out[13], in[6]=out[14], in[7]=out[15], out=8To15);
+
+	Or(a=0To7, b=8To15, out=0To15);
+	Not(in=0To15, out=zr);
+	Or(a=out[15], b=0, out=ng);
+}
